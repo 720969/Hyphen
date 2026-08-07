@@ -37,9 +37,22 @@ namespace Hyphen.Editor
         private SerializedProperty _raycastTarget;
         private SerializedProperty _maskable;
 
-        // Alignment button labels
         private static readonly string[] _hLabels = { "L", "C", "R" };
         private static readonly string[] _vLabels = { "T", "M", "B" };
+
+        // Box style cache
+        private static GUIStyle _boxHeaderStyle;
+        private static GUIStyle _boxBodyStyle;
+
+        private static GUIStyle BoxHeader => _boxHeaderStyle ??= new GUIStyle(EditorStyles.boldLabel)
+        {
+            padding = new RectOffset(10, 10, 2, 2)
+        };
+
+        private static GUIStyle BoxBody => _boxBodyStyle ??= new GUIStyle(GUI.skin.box)
+        {
+            padding = new RectOffset(10, 10, 5, 5)
+        };
 
         private void OnEnable()
         {
@@ -67,6 +80,19 @@ namespace Hyphen.Editor
             _glowColor = serializedObject.FindProperty("_glowColor");
         }
 
+        private void BeginGroup(string title)
+        {
+            EditorGUILayout.BeginVertical(BoxBody);
+            EditorGUILayout.LabelField(title, BoxHeader);
+            EditorGUILayout.Space(2);
+        }
+
+        private void EndGroup()
+        {
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(5);
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -77,20 +103,20 @@ namespace Hyphen.Editor
             EditorGUILayout.Space(3);
 
             // --- Font Settings ---
-            EditorGUILayout.HelpBox("Font Settings", MessageType.None);
+            BeginGroup("Font Settings");
             EditorGUILayout.PropertyField(_fontAsset, new GUIContent("Font Asset"));
             EditorGUILayout.PropertyField(_fontSize);
             EditorGUILayout.PropertyField(_useDistanceField, new GUIContent("Distance Field Enabled"));
-            EditorGUILayout.PropertyField(_textColor, new GUIContent("Text Color"));
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PropertyField(_raycastTarget);
                 EditorGUILayout.PropertyField(_maskable);
             }
-            EditorGUILayout.Space(5);
+            EditorGUILayout.PropertyField(_textColor, new GUIContent("Text Color"));
+            EndGroup();
 
             // --- Alignment ---
-            EditorGUILayout.HelpBox("Alignment", MessageType.None);
+            BeginGroup("Alignment");
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.Label("Vertical", GUILayout.Width(50));
@@ -107,19 +133,18 @@ namespace Hyphen.Editor
                 if (hSel != _hAlignment.enumValueIndex)
                     _hAlignment.enumValueIndex = hSel;
             }
-            EditorGUILayout.Space(5);
+            EndGroup();
 
             // --- Layout ---
-            EditorGUILayout.HelpBox("Layout", MessageType.None);
+            BeginGroup("Layout");
             EditorGUILayout.PropertyField(_overflow);
             EditorGUILayout.PropertyField(_wrapMode);
             EditorGUILayout.PropertyField(_lineSpacing);
             EditorGUILayout.PropertyField(_additionalKerning);
-            EditorGUILayout.Space(5);
+            EndGroup();
 
             // --- Effects ---
-            EditorGUILayout.HelpBox("Effects", MessageType.None);
-            EditorGUI.indentLevel++;
+            BeginGroup("Effects");
 
             EditorGUILayout.LabelField("Shadow", EditorStyles.miniBoldLabel);
             EditorGUILayout.PropertyField(_shadowEnabled);
@@ -179,7 +204,7 @@ namespace Hyphen.Editor
                 EditorGUILayout.PropertyField(_glowColor);
             }
 
-            EditorGUI.indentLevel--;
+            EndGroup();
 
             serializedObject.ApplyModifiedProperties();
         }
