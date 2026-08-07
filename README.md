@@ -9,7 +9,7 @@ A FreeType-based text rendering engine for Unity UGUI
 
 ## Installation
 ### Via UnityPackage
-1. Download `Hyphen.unitypackage` from the [Releases](../../releases) page
+1. Download `com.hyphen.freetype.unitypackage` from the [Releases](../../releases) page
 2. In Unity: `Assets > Import Package > Custom Package`
 3. Select the downloaded `.unitypackage` file and import
 ### Via Git
