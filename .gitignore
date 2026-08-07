@@ -30,19 +30,21 @@
 Thumbs.db
 desktop.ini
 
-# Development environment (not part of the package)
+# Everything under Assets/ except Hyphen package (migrated to UPM)
+Assets/
+
+# Project-specific files (not part of UPM package)
+Packages/manifest.json
+Packages/packages-lock.json
+ProjectSettings/
+
+# Codely / bridge (development only)
 .codely/
 .codely-cli/
 .com-unity-codely.json
 .codelyignore
-Assets/cn.tuanjie.codely.bridge/
-Assets/Plugins/
-Assets/Editor Resources/
-Assets/Settings/
-Assets/Scenes/
-
-# Old Assets/Hyphen (migrated to Packages/com.hyphen.label/)
-Assets/Hyphen/
+CODELY.md
+CODELY.md.meta
 
 # Third-party reference sources (not part of the package)
 cocos2d-x-cocos2d-x-3.10/
