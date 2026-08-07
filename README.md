@@ -31,6 +31,7 @@ To create your own font assets:
 2. Right-click → `Assets > Create > Hyphen > Font Asset`
 3. A `.bytes` copy will be created in the same folder
 4. Assign this `.bytes` file to the **Font Asset** field on your Hyphen Label
+
 A default **Noto Sans SC** font is bundled with the package.
 
 ### Effects
