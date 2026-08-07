@@ -14,7 +14,7 @@ A FreeType-based text rendering engine for Unity UGUI
 3. Select the downloaded `.unitypackage` file and import
 ### Via Git
 1. In Unity: `Window > Package Manager > + > Add package from git URL`
-2. Enter the repository URL
+2. Enter the repository URL (https://github.com/720969/Hyphen.git?path=/Packages/com.hyphen.freetype)
 
 ## Quick Start
 1. In Hierarchy, right-click → `UI (Canvas) > Text (Hyphen)`
