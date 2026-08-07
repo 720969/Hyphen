@@ -1,0 +1,86 @@
+# Hyphen License
+
+Copyright (c) 2026 Hyphen Contributors
+
+## Hyphen Source Code (MIT License)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## FreeType Library (FreeType License / FTL)
+
+The FreeType 2.14.3 font engine, including the compiled freetype.dll and
+associated source code, is copyright © 1996-2024 by David Turner, Robert
+Wilhelm, and Werner Lemberg. All rights reserved.
+
+This software is distributed under the FreeType License (FTL), which is a
+BSD-style license with an advertising clause. The full text of the FTL is
+available at https://freetype.org/legal/terms-of-service.html
+
+Key requirements of the FTL:
+
+1. Redistributions of source code must retain the FTL license file unaltered.
+2. Redistributions in binary form must provide a disclaimer stating that the
+   software is based in part on the work of the FreeType Team.
+3. Neither the name of the FreeType authors nor the names of its contributors
+   may be used for commercial, advertising, or promotional purposes without
+   specific prior written permission.
+
+Suggested attribution text:
+
+    Portions of this software are copyright © 2024 The FreeType Project
+    (https://freetype.org). All rights reserved.
+
+## edtaa3 (BSD 2-Clause License)
+
+The edtaa3 distance transform algorithm (edtaa3func.c / edtaa3func.h) is
+copyright © 2009 Stefan Gustavson (stefan.gustavson@gmail.com). All rights
+reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY STEFAN GUSTAVSON ''AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+EVENT SHALL STEFAN GUSTAVSON OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## Noto Sans SC Font (SIL Open Font License 1.1)
+
+The bundled Noto Sans SC font is copyright © Google Inc. It is licensed
+under the SIL Open Font License, Version 1.1. The full license is available
+at https://openfontlicense.org
+
+## Cocos2d-x (Reference Implementation)
+
+The architecture of Hyphen is based on the cocos2d-x CCLabel engine.
+cocos2d-x is copyright © 2010-2015 Chukong Technologies Inc. and is licensed
+under the MIT License. No cocos2d-x source code is included in this package;
+it was used solely as an architectural reference during development.

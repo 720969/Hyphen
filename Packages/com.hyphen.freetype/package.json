@@ -1,0 +1,23 @@
+{
+    "name": "com.hyphen.freetype",
+    "version": "1.0.0",
+    "displayName": "Hyphen Label",
+    "description": "FreeType-based text rendering engine for Unity UGUI",
+    "unity": "2021.3",
+    "license": "MIT",
+    "dependencies": {
+        "com.unity.ugui": "2.0.0"
+    },
+    "keywords": [
+        "text",
+        "freetype",
+        "ugui",
+        "font",
+        "outline",
+        "sdf",
+        "cocos2d"
+    ],
+    "author": {
+        "name": "Hyphen Contributors"
+    }
+}

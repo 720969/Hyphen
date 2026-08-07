@@ -1,0 +1,56 @@
+# Unity project files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]em-[Ll]og/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Development environment (not part of the package)
+.codely/
+.codely-cli/
+.com-unity-codely.json
+.codelyignore
+Assets/cn.tuanjie.codely.bridge/
+Assets/Plugins/
+Assets/Editor Resources/
+Assets/Settings/
+Assets/Scenes/
+
+# Old Assets/Hyphen (migrated to Packages/com.hyphen.label/)
+Assets/Hyphen/
+
+# Third-party reference sources (not part of the package)
+cocos2d-x-cocos2d-x-3.10/
+freetype-2.14.3/
+freetype-bin/
+edtaa3func.c
+edtaa3func.h
+freetype-2.14.3.tar.gz
+
+# Screenshots (dev artifacts)
+screenshots/
