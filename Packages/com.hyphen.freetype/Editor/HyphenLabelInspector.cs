@@ -37,8 +37,6 @@ namespace Hyphen.Editor
         private SerializedProperty _raycastTarget;
         private SerializedProperty _maskable;
 
-        private bool _effectsFoldout = true;
-
         // Alignment button labels
         private static readonly string[] _hLabels = { "L", "C", "R" };
         private static readonly string[] _vLabels = { "T", "M", "B" };
@@ -78,10 +76,12 @@ namespace Hyphen.Editor
             _text.stringValue = EditorGUILayout.TextArea(_text.stringValue, GUILayout.MinHeight(60));
             EditorGUILayout.Space(3);
 
-            // Font — ObjectField for TextAsset
+            // --- Font Settings ---
+            EditorGUILayout.HelpBox("Font Settings", MessageType.None);
             EditorGUILayout.PropertyField(_fontAsset, new GUIContent("Font Asset"));
             EditorGUILayout.PropertyField(_fontSize);
             EditorGUILayout.PropertyField(_useDistanceField, new GUIContent("Distance Field Enabled"));
+            EditorGUILayout.PropertyField(_textColor, new GUIContent("Text Color"));
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.PropertyField(_raycastTarget);
@@ -89,11 +89,10 @@ namespace Hyphen.Editor
             }
             EditorGUILayout.Space(5);
 
-            // Alignment — button grid
-            EditorGUILayout.LabelField("Alignment", EditorStyles.boldLabel);
+            // --- Alignment ---
+            EditorGUILayout.HelpBox("Alignment", MessageType.None);
             using (new EditorGUILayout.HorizontalScope())
             {
-                // Vertical: T / M / B
                 GUILayout.Label("Vertical", GUILayout.Width(50));
                 int vSel = GUILayout.SelectionGrid(_vAlignment.enumValueIndex, _vLabels, 3,
                     GUILayout.Height(22));
@@ -102,7 +101,6 @@ namespace Hyphen.Editor
 
                 GUILayout.Space(20);
 
-                // Horizontal: L / C / R
                 GUILayout.Label("Horizontal", GUILayout.Width(60));
                 int hSel = GUILayout.SelectionGrid(_hAlignment.enumValueIndex, _hLabels, 3,
                     GUILayout.Height(22));
@@ -111,90 +109,77 @@ namespace Hyphen.Editor
             }
             EditorGUILayout.Space(5);
 
-            // Layout
-            EditorGUILayout.LabelField("Layout", EditorStyles.boldLabel);
+            // --- Layout ---
+            EditorGUILayout.HelpBox("Layout", MessageType.None);
             EditorGUILayout.PropertyField(_overflow);
             EditorGUILayout.PropertyField(_wrapMode);
             EditorGUILayout.PropertyField(_lineSpacing);
             EditorGUILayout.PropertyField(_additionalKerning);
             EditorGUILayout.Space(5);
 
-            // Color
-            EditorGUILayout.PropertyField(_textColor, new GUIContent("Text Color"));
-            EditorGUILayout.Space(5);
+            // --- Effects ---
+            EditorGUILayout.HelpBox("Effects", MessageType.None);
+            EditorGUI.indentLevel++;
 
-            // Effects
-            _effectsFoldout = EditorGUILayout.Foldout(_effectsFoldout, "Effects", true);
-            if (_effectsFoldout)
+            EditorGUILayout.LabelField("Shadow", EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_shadowEnabled);
+            if (_shadowEnabled.boolValue)
             {
-                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_shadowColor);
+                EditorGUILayout.PropertyField(_shadowOffset);
+            }
 
-                EditorGUILayout.LabelField("Shadow", EditorStyles.miniBoldLabel);
-                EditorGUILayout.PropertyField(_shadowEnabled);
-                if (_shadowEnabled.boolValue)
-                {
-                    EditorGUILayout.PropertyField(_shadowColor);
-                    EditorGUILayout.PropertyField(_shadowOffset);
-                }
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField("Outline", EditorStyles.miniBoldLabel);
 
-                EditorGUILayout.Space(3);
-                EditorGUILayout.LabelField("Outline", EditorStyles.miniBoldLabel);
-
-                // "Outline Enabled" checkbox bound to _outlineEnabled (independent of size).
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(_outlineEnabled);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    if (_outlineEnabled.boolValue)
-                    {
-                        // Outline disables SDF and Glow
-                        _useDistanceField.boolValue = false;
-                        _glowSize.intValue = 0;
-                    }
-                }
-
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(_outlineEnabled);
+            if (EditorGUI.EndChangeCheck())
+            {
                 if (_outlineEnabled.boolValue)
                 {
-                    EditorGUILayout.PropertyField(_outlineColor);
-
-                    // Float input box for outline width (supports decimals, keeps focus)
-                    EditorGUI.BeginChangeCheck();
-                    float sizeVal = EditorGUILayout.FloatField("Outline Size", _outlineSize.floatValue);
-                    if (EditorGUI.EndChangeCheck())
-                    {
-                        _outlineSize.floatValue = Mathf.Max(0f, sizeVal);
-                    }
+                    _useDistanceField.boolValue = false;
+                    _glowSize.intValue = 0;
                 }
+            }
 
-                EditorGUILayout.Space(3);
-                EditorGUILayout.LabelField("Glow", EditorStyles.miniBoldLabel);
+            if (_outlineEnabled.boolValue)
+            {
+                EditorGUILayout.PropertyField(_outlineColor);
 
-                // cocos2dx glow is a fixed-radius soft halo (smoothstep(0.5,1.0,sqrt(dist))).
-                // Glow Size acts as an on/off toggle (0 = off, >0 = on).
                 EditorGUI.BeginChangeCheck();
-                bool glowOn = EditorGUILayout.Toggle("Glow Enabled", _glowSize.intValue > 0);
+                float sizeVal = EditorGUILayout.FloatField("Outline Size", _outlineSize.floatValue);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    if (glowOn)
-                    {
-                        _glowSize.intValue = 1;
-                        // Glow enables SDF and disables Outline
-                        _useDistanceField.boolValue = true;
-                        _outlineSize.floatValue = 0f;
-                    }
-                    else
-                    {
-                        _glowSize.intValue = 0;
-                    }
+                    _outlineSize.floatValue = Mathf.Max(0f, sizeVal);
                 }
-
-                if (_glowSize.intValue > 0)
-                {
-                    EditorGUILayout.PropertyField(_glowColor);
-                }
-
-                EditorGUI.indentLevel--;
             }
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField("Glow", EditorStyles.miniBoldLabel);
+
+            EditorGUI.BeginChangeCheck();
+            bool glowOn = EditorGUILayout.Toggle("Glow Enabled", _glowSize.intValue > 0);
+            if (EditorGUI.EndChangeCheck())
+            {
+                if (glowOn)
+                {
+                    _glowSize.intValue = 1;
+                    _useDistanceField.boolValue = true;
+                    _outlineSize.floatValue = 0f;
+                }
+                else
+                {
+                    _glowSize.intValue = 0;
+                }
+            }
+
+            if (_glowSize.intValue > 0)
+            {
+                EditorGUILayout.PropertyField(_glowColor);
+            }
+
+            EditorGUI.indentLevel--;
 
             serializedObject.ApplyModifiedProperties();
         }
