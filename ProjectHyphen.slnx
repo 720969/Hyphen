@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Project Path="UnityTcp.Editor.csproj" />
+  <Project Path="Cn.Tuanjie.Codely.Editor.csproj" />
+  <Project Path="Hyphen.csproj" />
+  <Project Path="Hyphen.Editor.csproj" />
+  <Project Path="Codely.Common.csproj" />
+</Solution>

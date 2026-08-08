@@ -69,6 +69,7 @@ namespace Hyphen
         private float _originalFontSize;
         private float _originalLineHeight;
         private float _lastScaleFactor = 1f;
+        private Canvas _cachedRootCanvas;
 
         private List<LetterInfo> _lettersInfo = new List<LetterInfo>();
         private List<float> _linesWidth = new List<float>();
@@ -288,8 +289,8 @@ namespace Hyphen
 
         internal void RecordLetterInfo(float posX, float posY, char utf16Char, int letterIndex, int lineIndex)
         {
-            while (_lettersInfo.Count <= letterIndex)
-                _lettersInfo.Add(default);
+            if (_lettersInfo.Count <= letterIndex)
+                _lettersInfo.AddRange(new LetterInfo[letterIndex + 1 - _lettersInfo.Count]);
             var info = _lettersInfo[letterIndex];
             info.lineIndex = lineIndex;
             info.utf16Char = utf16Char;
@@ -302,7 +303,8 @@ namespace Hyphen
 
         internal void RecordPlaceholderInfo(int letterIndex, char utf16Char)
         {
-            while (_lettersInfo.Count <= letterIndex)
+            if (_lettersInfo.Count <= letterIndex)
+                _lettersInfo.AddRange(new LetterInfo[letterIndex + 1 - _lettersInfo.Count]);
                 _lettersInfo.Add(default);
             var info = _lettersInfo[letterIndex];
             info.utf16Char = utf16Char;
@@ -326,6 +328,7 @@ namespace Hyphen
             var cr = GetComponent<CanvasRenderer>();
             if (cr != null)
                 cr.cullTransparentMesh = false;
+            _cachedRootCanvas = null; // re-cache on enable
             EnsureFontRegistered();
             RefreshMaterial();
         }
@@ -345,6 +348,15 @@ namespace Hyphen
                 HyphenFontAtlasCache.ReleaseFontAtlas(_fontAtlas);
                 _fontAtlas = null;
             }
+            _horizontalKernings = null;
+#if UNITY_EDITOR
+            _lastValidatedFontSize = -1;
+            _lastValidatedDF = false;
+            _lastValidatedOutline = -1;
+            _lastValidatedOutlineEnabled = false;
+            _lastValidatedGlow = -1;
+            _lastValidatedFont = null;
+#endif
             base.OnDisable();
         }
 
@@ -369,11 +381,19 @@ namespace Hyphen
                 }
             }
 
-            // Detect Canvas scaleFactor change → re-register font for HiDPI
-            var canvas = GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.rootCanvas != null)
+        // Detect Canvas scaleFactor change → re-register font for HiDPI
+            // Cached to avoid GetComponentInParent every frame
+            if (_cachedRootCanvas == null)
             {
-                float currentSf = Mathf.Max(1f, canvas.rootCanvas.scaleFactor);
+                _cachedRootCanvas = GetComponentInParent<Canvas>();
+                if (_cachedRootCanvas != null)
+                    _cachedRootCanvas = _cachedRootCanvas.rootCanvas;
+            }
+            if (_cachedRootCanvas != null)
+            {
+                float currentSf = Mathf.Max(1f, _cachedRootCanvas.scaleFactor);
+                // Round to 0.1 precision to avoid micro-fluctuation
+                currentSf = Mathf.Round(currentSf * 10f) / 10f;
                 if (!Mathf.Approximately(currentSf, _lastScaleFactor))
                 {
                     _lastScaleFactor = currentSf;
@@ -576,8 +596,7 @@ namespace Hyphen
 
         private void ComputeHorizontalKernings(string text)
         {
-            if (_horizontalKernings != null)
-                _horizontalKernings = null;
+            _horizontalKernings = null;
             if (_fontAtlas?.Font == null) return;
             _horizontalKernings = _fontAtlas.Font.GetHorizontalKerningForText(text, out _);
         }
@@ -600,10 +619,15 @@ namespace Hyphen
 
             // HiDPI: read Canvas scaleFactor for super-sampling (like cocos2dx CC_CONTENT_SCALE_FACTOR)
             float scaleFactor = 1f;
-            var canvas = canvasRenderer != null ? GetComponentInParent<Canvas>() : null;
-            if (canvas != null && canvas.rootCanvas != null)
+            if (_cachedRootCanvas == null)
             {
-                scaleFactor = canvas.rootCanvas.scaleFactor;
+                var canvas = canvasRenderer != null ? GetComponentInParent<Canvas>() : null;
+                if (canvas != null)
+                    _cachedRootCanvas = canvas.rootCanvas;
+            }
+            if (_cachedRootCanvas != null)
+            {
+                scaleFactor = _cachedRootCanvas.scaleFactor;
                 if (scaleFactor < 1f) scaleFactor = 1f;
             }
 
