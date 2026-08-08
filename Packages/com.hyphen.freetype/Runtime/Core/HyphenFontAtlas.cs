@@ -29,11 +29,14 @@ namespace Hyphen
         private int _currLineHeight;
         private float _lineHeight;
         private readonly bool _hasOutline;
+        private float _scaleFactor = 1f;
 
         public float LineHeight => _lineHeight;
         public IReadOnlyList<Texture2D> Textures => _atlasTextures;
         public HyphenFontFreeType Font => _font;
         public int CurrentPage => _currentPage;
+
+        public void SetScaleFactor(float sf) => _scaleFactor = Mathf.Max(1f, sf);
 
         public HyphenFontAtlas(HyphenFontFreeType font)
         {
@@ -195,6 +198,18 @@ namespace Hyphen
                     tempDef.V = _currentPageOrigY;
                     tempDef.textureID = _currentPage;
                     _currentPageOrigX += tempDef.width + 1;
+
+                    // Convert from render pixels to layout points (divide by scaleFactor)
+                    // This matches cocos2dx: tempDef.width /= scaleFactor; etc.
+                    if (_scaleFactor != 1f)
+                    {
+                        tempDef.width /= _scaleFactor;
+                        tempDef.height /= _scaleFactor;
+                        tempDef.offsetX /= _scaleFactor;
+                        tempDef.offsetY /= _scaleFactor;
+                        tempDef.U /= _scaleFactor;
+                        tempDef.V /= _scaleFactor;
+                    }
                 }
                 else
                 {
@@ -210,7 +225,7 @@ namespace Hyphen
                     _currentPageOrigX += 1;
                 }
 
-                tempDef.xAdvance = glyphBitmap.xAdvance;
+                tempDef.xAdvance = _scaleFactor != 1f ? (int)(glyphBitmap.xAdvance / _scaleFactor) : glyphBitmap.xAdvance;
                 _letterDefinitions[c] = tempDef;
             }
 

@@ -68,6 +68,7 @@ namespace Hyphen
         private float _tailoredBottomY;
         private float _originalFontSize;
         private float _originalLineHeight;
+        private float _lastScaleFactor = 1f;
 
         private List<LetterInfo> _lettersInfo = new List<LetterInfo>();
         private List<float> _linesWidth = new List<float>();
@@ -367,6 +368,20 @@ namespace Hyphen
                     rectTransform.sizeDelta = sd;
                 }
             }
+
+            // Detect Canvas scaleFactor change → re-register font for HiDPI
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas != null && canvas.rootCanvas != null)
+            {
+                float currentSf = Mathf.Max(1f, canvas.rootCanvas.scaleFactor);
+                if (!Mathf.Approximately(currentSf, _lastScaleFactor))
+                {
+                    _lastScaleFactor = currentSf;
+                    _fontRegistered = false;
+                    _contentDirty = true;
+                    SetVerticesDirty();
+                }
+            }
         }
 
         // --- OnPopulateMesh: 1:1 port of cocos2dx Label::onDraw ---
@@ -580,9 +595,18 @@ namespace Hyphen
             if (effectiveOutline > 0)
                 useDF = false;
 
+            // HiDPI: read Canvas scaleFactor for super-sampling (like cocos2dx CC_CONTENT_SCALE_FACTOR)
+            float scaleFactor = 1f;
+            var canvas = canvasRenderer != null ? GetComponentInParent<Canvas>() : null;
+            if (canvas != null && canvas.rootCanvas != null)
+            {
+                scaleFactor = canvas.rootCanvas.scaleFactor;
+                if (scaleFactor < 1f) scaleFactor = 1f;
+            }
+
             _fontAtlas = HyphenFontAtlasCache.GetFontAtlasTTF(
                 fontName, _fontAsset.bytes, _fontSize,
-                GlyphCollection.DYNAMIC, null, useDF, effectiveOutline);
+                GlyphCollection.DYNAMIC, null, useDF, effectiveOutline, scaleFactor);
 
             if (_fontAtlas != null)
             {

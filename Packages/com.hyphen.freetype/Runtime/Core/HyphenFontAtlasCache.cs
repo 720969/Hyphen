@@ -18,7 +18,7 @@ namespace Hyphen
         /// </summary>
         public static HyphenFontAtlas GetFontAtlasTTF(string fontName, byte[] fontData, float fontSize,
             GlyphCollection glyphs = GlyphCollection.DYNAMIC, string customGlyphs = null,
-            bool distanceFieldEnabled = false, float outlineSize = 0)
+            bool distanceFieldEnabled = false, float outlineSize = 0, float scaleFactor = 1f)
         {
             bool useDistanceField = distanceFieldEnabled;
             if (outlineSize > 0)
@@ -26,6 +26,7 @@ namespace Hyphen
 
             string atlasName = GenerateFontName(fontName, fontSize, useDistanceField);
             atlasName += "_outline_" + outlineSize;
+            atlasName += "_sf_" + scaleFactor.ToString("F2");
 
             if (s_atlasMap.TryGetValue(atlasName, out var atlas))
             {
@@ -33,8 +34,12 @@ namespace Hyphen
                 return atlas;
             }
 
-            var font = HyphenFontFreeType.Create(fontName, fontData, fontSize, glyphs, customGlyphs,
-                useDistanceField, outlineSize);
+            // Multiply by scaleFactor for HiDPI rendering (like cocos2dx CC_CONTENT_SCALE_FACTOR)
+            float renderFontSize = fontSize * scaleFactor;
+            float renderOutline = outlineSize * scaleFactor;
+
+            var font = HyphenFontFreeType.Create(fontName, fontData, renderFontSize, glyphs, customGlyphs,
+                useDistanceField, renderOutline);
             if (font == null)
             {
                 Debug.LogError($"[Hyphen] Failed to create FreeType font '{fontName}'");
@@ -44,6 +49,7 @@ namespace Hyphen
             var newAtlas = font.CreateFontAtlas();
             if (newAtlas != null)
             {
+                newAtlas.SetScaleFactor(scaleFactor);
                 s_atlasMap[atlasName] = newAtlas;
                 s_refCount[atlasName] = 1;
                 return newAtlas;
