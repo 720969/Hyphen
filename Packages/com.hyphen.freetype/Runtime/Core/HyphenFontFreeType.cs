@@ -46,11 +46,13 @@ namespace Hyphen
             _customGlyphs = customGlyphs;
         }
 
-        public override HyphenFontAtlas CreateFontAtlas()
+        public override HyphenFontAtlas CreateFontAtlas() => CreateFontAtlas(1f);
+
+        public HyphenFontAtlas CreateFontAtlas(float scaleFactor)
         {
             if (_fontAtlas == null)
             {
-                _fontAtlas = new HyphenFontAtlas(this);
+                _fontAtlas = new HyphenFontAtlas(this, scaleFactor);
             }
             return _fontAtlas;
         }

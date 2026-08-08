@@ -26,6 +26,7 @@ namespace Hyphen
         private int _letterPadding;
         private int _letterEdgeExtend;
         private int _fontAscender;
+        private int _fontAscenderRaw;
         private int _currLineHeight;
         private float _lineHeight;
         private readonly bool _hasOutline;
@@ -38,15 +39,17 @@ namespace Hyphen
 
         public void SetScaleFactor(float sf) => _scaleFactor = Mathf.Max(1f, sf);
 
-        public HyphenFontAtlas(HyphenFontFreeType font)
+        public HyphenFontAtlas(HyphenFontFreeType font, float scaleFactor = 1f)
         {
             _font = font;
+            _scaleFactor = Mathf.Max(1f, scaleFactor);
             _letterDefinitions = new Dictionary<char, HyphenLetterDefinition>();
             _atlasTextures = new List<Texture2D>();
             _pageData = new List<byte[]>();
 
             _lineHeight = _font.GetFontMaxHeight();
             _fontAscender = _font.GetFontAscender();
+            _fontAscenderRaw = _fontAscender;
             _currentPage = 0;
             _currentPageOrigX = 0;
             _currentPageOrigY = 0;
@@ -66,6 +69,13 @@ namespace Hyphen
             if (_hasOutline)
             {
                 _lineHeight += 2 * outlineSize;
+            }
+
+            // Convert lineHeight and ascender from render pixels to layout points
+            if (_scaleFactor != 1f)
+            {
+                _lineHeight /= _scaleFactor;
+                _fontAscender = (int)(_fontAscender / _scaleFactor);
             }
 
             // Create first page
@@ -143,8 +153,10 @@ namespace Hyphen
                     tempDef.validDefinition = true;
                     tempDef.width = glyphBitmap.width + _letterPadding + _letterEdgeExtend;
                     tempDef.height = glyphBitmap.height + _letterPadding + _letterEdgeExtend;
-                    tempDef.offsetX = glyphBitmap.offsetX + adjustForDistanceMap + adjustForExtend;
-                    tempDef.offsetY = _fontAscender + glyphBitmap.offsetY - adjustForDistanceMap - adjustForExtend;
+                    // offsetX and offsetY: glyphBitmap values are in RENDER pixels (FreeType at fontSize*sf).
+                    // Divide by sf to convert to layout points.
+                    tempDef.offsetX = (glyphBitmap.offsetX + adjustForDistanceMap + adjustForExtend);
+                    tempDef.offsetY = (_fontAscenderRaw + glyphBitmap.offsetY - adjustForDistanceMap - adjustForExtend);
 
                     if (glyphBitmap.bitmapHeight > _currLineHeight)
                     {
@@ -199,16 +211,18 @@ namespace Hyphen
                     tempDef.textureID = _currentPage;
                     _currentPageOrigX += tempDef.width + 1;
 
-                    // Convert from render pixels to layout points (divide by scaleFactor)
-                    // This matches cocos2dx: tempDef.width /= scaleFactor; etc.
+                    // Convert layout metrics from render pixels to layout points.
+                    // IMPORTANT: U/V stay in render pixels (atlas texture coords),
+                    // only width/height/offset/xAdvance are divided (layout positions).
+                    // This matches cocos2dx: it divides width/height/offset/xAdvance
+                    // but NOT U/V (see CCFontAtlas.cpp prepareLetterDefinitions).
                     if (_scaleFactor != 1f)
                     {
                         tempDef.width /= _scaleFactor;
                         tempDef.height /= _scaleFactor;
                         tempDef.offsetX /= _scaleFactor;
                         tempDef.offsetY /= _scaleFactor;
-                        tempDef.U /= _scaleFactor;
-                        tempDef.V /= _scaleFactor;
+                        // U and V are NOT divided — they are atlas pixel coords
                     }
                 }
                 else

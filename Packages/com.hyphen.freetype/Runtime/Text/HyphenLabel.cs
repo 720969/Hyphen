@@ -469,9 +469,12 @@ namespace Hyphen
             float top = py - pivotY * rectH;
             float bottom = top - sh;
 
+            // UV: U/V are in render pixels (atlas coords), width/height are in layout points.
+            // Must multiply by scaleFactor to get render pixel extent for UV.
+            float sf = _lastScaleFactor;
             float uL = letterDef.U / HyphenFontAtlas.CacheTextureWidth;
-            float uR = (letterDef.U + letterDef.width) / HyphenFontAtlas.CacheTextureWidth;
-            float uB = (letterDef.V + letterDef.height) / HyphenFontAtlas.CacheTextureHeight;
+            float uR = (letterDef.U + letterDef.width * sf) / HyphenFontAtlas.CacheTextureWidth;
+            float uB = (letterDef.V + letterDef.height * sf) / HyphenFontAtlas.CacheTextureHeight;
             float uT = letterDef.V / HyphenFontAtlas.CacheTextureHeight;
 
             if (clamp)

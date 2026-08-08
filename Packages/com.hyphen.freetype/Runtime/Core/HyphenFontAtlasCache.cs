@@ -46,10 +46,9 @@ namespace Hyphen
                 return null;
             }
 
-            var newAtlas = font.CreateFontAtlas();
+            var newAtlas = font.CreateFontAtlas(scaleFactor);
             if (newAtlas != null)
             {
-                newAtlas.SetScaleFactor(scaleFactor);
                 s_atlasMap[atlasName] = newAtlas;
                 s_refCount[atlasName] = 1;
                 return newAtlas;
