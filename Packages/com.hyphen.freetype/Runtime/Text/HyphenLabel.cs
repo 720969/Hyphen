@@ -9,7 +9,7 @@ using UnityEditor;
 namespace Hyphen
 {
     /// <summary>
-    /// UGUI text component powered by FreeType.
+    /// UGUI text component
     /// Port of cocos2dx CCLabel, adapted for Unity MaskableGraphic.
     /// </summary>
     [ExecuteAlways]
@@ -17,7 +17,7 @@ namespace Hyphen
     [AddComponentMenu("UI/Hyphen Label")]
     [DisallowMultipleComponent]
     [Icon("HyphenLabelIcon")]
-    public class HyphenLabel : MaskableGraphic, UnityEngine.UI.ILayoutElement
+    public class HyphenLabel : MaskableGraphic, ILayoutElement
     {
         public struct LetterInfo
         {
@@ -45,13 +45,13 @@ namespace Hyphen
         [SerializeField] private Color _textColor = Color.white;
 
         [SerializeField] private bool _shadowEnabled = false;
-        [SerializeField] private Color _shadowColor = new Color(0.431f, 0.431f, 0.431f, 1f); // #6E6E6E
+        [SerializeField] private Color _shadowColor = new Color(0.431f, 0.431f, 0.431f, 1f);
         [SerializeField] private Vector2 _shadowOffset = new Vector2(2, -2);
         [SerializeField] private bool _outlineEnabled = false;
         [SerializeField] private float _outlineSize = 1f;
-        [SerializeField] private Color _outlineColor = Color.red; // #FF0000
+        [SerializeField] private Color _outlineColor = Color.red;
         [SerializeField] private int _glowSize = 0;
-        [SerializeField] private Color _glowColor = Color.red; // #FF0000
+        [SerializeField] private Color _glowColor = Color.red;
 
         // --- Internal state ---
 
@@ -70,6 +70,7 @@ namespace Hyphen
         private float _originalLineHeight;
         private float _lastScaleFactor = 1f;
         private Canvas _cachedRootCanvas;
+        private bool _canvasValid = false;
 
         private List<LetterInfo> _lettersInfo = new List<LetterInfo>();
         private List<float> _linesWidth = new List<float>();
@@ -155,8 +156,6 @@ namespace Hyphen
             set { if (_textColor != value) { _textColor = value; RefreshMaterial(); _contentDirty = true; SetVerticesDirty(); } }
         }
 
-        // --- cocos2dx-style API ---
-
         public void SetString(string text) => Text = text;
         public string GetString() => _text;
         public void SetTextColor(Color color) => TextColor = color;
@@ -207,7 +206,6 @@ namespace Hyphen
             _shadowEnabled = false;
             _outlineEnabled = false;
             _glowSize = 0;
-            // Preserve remembered color/size values so re-enabling restores them.
             _contentDirty = true;
             RefreshMaterial();
             SetVerticesDirty();
@@ -224,7 +222,7 @@ namespace Hyphen
             SetVerticesDirty();
         }
 
-        // --- Internal accessors (for HyphenLabelTextFormatter) ---
+        // --- Internal accessors ---
 
         internal int NumberOfLines { get => _numberOfLines; set => _numberOfLines = value; }
         internal int LengthOfString => _lengthOfString;
@@ -268,11 +266,6 @@ namespace Hyphen
         {
             _preferredWidth = size.x;
             _preferredHeight = size.y;
-
-            // RESIZE_HEIGHT: resize is actually applied in Update(), which runs
-            // outside the Canvas graphic rebuild loop. Setting sizeDelta here would
-            // trigger OnRectTransformDimensionsChange inside OnPopulateMesh's rebuild
-            // loop → "already inside a graphic rebuild loop" error.
         }
 
         internal void SetLineHeightInternal(float height) => _lineHeight = height;
@@ -289,12 +282,19 @@ namespace Hyphen
 
         internal void RecordLetterInfo(float posX, float posY, char utf16Char, int letterIndex, int lineIndex)
         {
+            // Ensure capacity without per-call allocations
             if (_lettersInfo.Count <= letterIndex)
-                _lettersInfo.AddRange(new LetterInfo[letterIndex + 1 - _lettersInfo.Count]);
+            {
+                int needed = letterIndex + 1 - _lettersInfo.Count;
+                for (int i = 0; i < needed; i++)
+                    _lettersInfo.Add(default);
+            }
+
             var info = _lettersInfo[letterIndex];
             info.lineIndex = lineIndex;
             info.utf16Char = utf16Char;
-            info.valid = _fontAtlas.HasLetterDefinition(utf16Char) &&
+            info.valid = _fontAtlas != null &&
+                _fontAtlas.HasLetterDefinition(utf16Char) &&
                 _fontAtlas.GetLetterDefinitionForChar(utf16Char, out _);
             info.positionX = posX;
             info.positionY = posY;
@@ -304,11 +304,18 @@ namespace Hyphen
         internal void RecordPlaceholderInfo(int letterIndex, char utf16Char)
         {
             if (_lettersInfo.Count <= letterIndex)
-                _lettersInfo.AddRange(new LetterInfo[letterIndex + 1 - _lettersInfo.Count]);
-                _lettersInfo.Add(default);
+            {
+                int needed = letterIndex + 1 - _lettersInfo.Count;
+                for (int i = 0; i < needed; i++)
+                    _lettersInfo.Add(default);
+            }
+
             var info = _lettersInfo[letterIndex];
             info.utf16Char = utf16Char;
             info.valid = false;
+            info.positionX = 0;
+            info.positionY = 0;
+            info.lineIndex = 0;
             _lettersInfo[letterIndex] = info;
         }
 
@@ -328,7 +335,8 @@ namespace Hyphen
             var cr = GetComponent<CanvasRenderer>();
             if (cr != null)
                 cr.cullTransparentMesh = false;
-            _cachedRootCanvas = null; // re-cache on enable
+            _cachedRootCanvas = null;
+            _canvasValid = false;
             EnsureFontRegistered();
             RefreshMaterial();
         }
@@ -349,11 +357,14 @@ namespace Hyphen
                 _fontAtlas = null;
             }
             _horizontalKernings = null;
+            _cachedRootCanvas = null;
+            _canvasValid = false;
+
 #if UNITY_EDITOR
             _lastValidatedFontSize = -1;
             _lastValidatedDF = false;
-            _lastValidatedOutline = -1;
             _lastValidatedOutlineEnabled = false;
+            _lastValidatedOutline = -1;
             _lastValidatedGlow = -1;
             _lastValidatedFont = null;
 #endif
@@ -369,7 +380,7 @@ namespace Hyphen
 
         private void Update()
         {
-            // Apply RESIZE_HEIGHT outside the Canvas rebuild loop (Update runs between frames)
+            // RESIZE_HEIGHT: apply outside Canvas rebuild loop
             if (_overflow == Overflow.RESIZE_HEIGHT && _textDesiredHeight > 0f)
             {
                 float currentH = rectTransform.rect.height;
@@ -381,19 +392,26 @@ namespace Hyphen
                 }
             }
 
-        // Detect Canvas scaleFactor change → re-register font for HiDPI
-            // Cached to avoid GetComponentInParent every frame
-            if (_cachedRootCanvas == null)
+            // Canvas scaleFactor change detection with caching
+            if (!_canvasValid || _cachedRootCanvas == null)
             {
-                _cachedRootCanvas = GetComponentInParent<Canvas>();
-                if (_cachedRootCanvas != null)
-                    _cachedRootCanvas = _cachedRootCanvas.rootCanvas;
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    _cachedRootCanvas = canvas.rootCanvas;
+                    _canvasValid = _cachedRootCanvas != null;
+                }
+                else
+                {
+                    _canvasValid = false;
+                }
             }
-            if (_cachedRootCanvas != null)
+
+            if (_canvasValid && _cachedRootCanvas != null)
             {
                 float currentSf = Mathf.Max(1f, _cachedRootCanvas.scaleFactor);
-                // Round to 0.1 precision to avoid micro-fluctuation
-                currentSf = Mathf.Round(currentSf * 10f) / 10f;
+                // Round to 2 decimals to avoid micro-fluctuation while preserving reasonable precision
+                currentSf = Mathf.Round(currentSf * 100f) / 100f;
                 if (!Mathf.Approximately(currentSf, _lastScaleFactor))
                 {
                     _lastScaleFactor = currentSf;
@@ -404,7 +422,7 @@ namespace Hyphen
             }
         }
 
-        // --- OnPopulateMesh: 1:1 port of cocos2dx Label::onDraw ---
+        // --- OnPopulateMesh ---
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
@@ -426,22 +444,10 @@ namespace Hyphen
             float maxY = (1f - pivotY) * rectH;
             bool clamp = _overflow == Overflow.CLAMP;
 
-            // Determine vertex color for text quads.
-            // cocos2dx: v_fragmentColor = node color (white).
-            // Outline/Glow shaders: result = v_fragmentColor * color → vertex color = white.
-            // Normal/DF shaders: result = v_fragmentColor * textColor * texture.a
-            //   → vertex color = _textColor (bake textColor, matching cocos2dx v_fragmentColor * u_textColor).
             bool hasEffect = _outlineEnabled || _glowSize > 0;
             Color textVertColor = hasEffect ? Color.white : _textColor;
 
-            // Shadow pass: draw shadow quads first (behind text).
-            // cocos2dx onDrawShadow: u_textColor = u_effectColor = shadowColor,
-            //   draws all quads with shadow transform offset.
-            // For Normal/DF: vertex color = shadowColor (bake, since shader uses vertex color * textColor * tex).
-            // For Outline/Glow: vertex color = shadowColor (shader: result = v_fragmentColor * color,
-            //   where color = textColor*font + effectColor*(1-font). With shadow, textColor=effectColor=shadowColor,
-            //   so color = shadowColor, result = shadowColor * shadowColor.a. We pass shadowColor as vertex color
-            //   and the shader multiplies by it.)
+            // Shadow pass
             if (_shadowEnabled)
             {
                 for (int i = 0; i < textLen; i++)
@@ -455,8 +461,7 @@ namespace Hyphen
                 }
             }
 
-            // Text pass.
-            // cocos2dx onDraw: u_textColor = textColor, u_effectColor = outlineColor.
+            // Text pass
             for (int i = 0; i < textLen; i++)
             {
                 var info = i < _lettersInfo.Count ? _lettersInfo[i] : default;
@@ -489,8 +494,6 @@ namespace Hyphen
             float top = py - pivotY * rectH;
             float bottom = top - sh;
 
-            // UV: U/V are in render pixels (atlas coords), width/height are in layout points.
-            // Must multiply by scaleFactor to get render pixel extent for UV.
             float sf = _lastScaleFactor;
             float uL = letterDef.U / HyphenFontAtlas.CacheTextureWidth;
             float uR = (letterDef.U + letterDef.width * sf) / HyphenFontAtlas.CacheTextureWidth;
@@ -546,7 +549,14 @@ namespace Hyphen
 
             _lengthOfString = _text.Length;
             _linesWidth.Clear();
+
+            // Pre-capacity _lettersInfo to avoid repeated growth
             _lettersInfo.Clear();
+            if (_lettersInfo.Capacity < _text.Length)
+                _lettersInfo.Capacity = _text.Length;
+            // Fill with default entries so RecordLetterInfo can index directly
+            for (int i = 0; i < _text.Length; i++)
+                _lettersInfo.Add(default);
 
             switch (_wrapMode)
             {
@@ -562,22 +572,28 @@ namespace Hyphen
             {
                 float origLineHeight = _lineHeight;
                 float fontSize = _fontSize;
-                var origDefs = _fontAtlas.SnapshotLetterDefinitions();
-                int i = 0;
+                int iteration = 0;
+                int maxIterations = 50;
 
-                while (_formatter.IsVerticalClamp() || _formatter.IsHorizontalClamp())
+                while (iteration < maxIterations && (_formatter.IsVerticalClamp() || _formatter.IsHorizontalClamp()))
                 {
-                    i++;
-                    float newFontSize = fontSize - i;
+                    iteration++;
+                    float newFontSize = fontSize - iteration;
                     if (newFontSize <= 1f) break;
 
-                    _fontAtlas.RestoreLetterDefinitions(origDefs);
                     float scale = newFontSize / fontSize;
-                    _fontAtlas.ScaleFontLetterDefinition(scale);
+                    // We do NOT modify _fontAtlas here — it's shared!
+                    // Instead, just compute shrink scale and re-run layout.
+                    _shrinkScale = scale;
                     _lineHeight = origLineHeight * scale;
 
                     _linesWidth.Clear();
                     _lettersInfo.Clear();
+                    if (_lettersInfo.Capacity < _text.Length)
+                        _lettersInfo.Capacity = _text.Length;
+                    for (int i = 0; i < _text.Length; i++)
+                        _lettersInfo.Add(default);
+
                     switch (_wrapMode)
                     {
                         case WrapMode.WORD: _formatter.MultilineTextWrapByWord(); break;
@@ -587,18 +603,24 @@ namespace Hyphen
                     _formatter.ComputeAlignmentOffset();
                 }
 
-                _shrinkScale = (fontSize - i) / fontSize;
-                if (_shrinkScale <= 0f) _shrinkScale = 1f / fontSize;
-                _fontAtlas.RestoreLetterDefinitions(origDefs);
                 _lineHeight = origLineHeight;
+                if (iteration >= maxIterations)
+                {
+                    _shrinkScale = 0.5f;
+                }
             }
         }
 
         private void ComputeHorizontalKernings(string text)
         {
-            _horizontalKernings = null;
-            if (_fontAtlas?.Font == null) return;
-            _horizontalKernings = _fontAtlas.Font.GetHorizontalKerningForText(text, out _);
+            if (_fontAtlas?.Font == null || string.IsNullOrEmpty(text))
+            {
+                _horizontalKernings = Array.Empty<int>();
+                return;
+            }
+
+            var kernings = _fontAtlas.Font.GetHorizontalKerningForText(text, out _);
+            _horizontalKernings = kernings ?? Array.Empty<int>();
         }
 
         // --- Font registration ---
@@ -617,15 +639,17 @@ namespace Hyphen
             if (effectiveOutline > 0)
                 useDF = false;
 
-            // HiDPI: read Canvas scaleFactor for super-sampling (like cocos2dx CC_CONTENT_SCALE_FACTOR)
             float scaleFactor = 1f;
-            if (_cachedRootCanvas == null)
+            if (!_canvasValid || _cachedRootCanvas == null)
             {
                 var canvas = canvasRenderer != null ? GetComponentInParent<Canvas>() : null;
                 if (canvas != null)
+                {
                     _cachedRootCanvas = canvas.rootCanvas;
+                    _canvasValid = _cachedRootCanvas != null;
+                }
             }
-            if (_cachedRootCanvas != null)
+            if (_canvasValid && _cachedRootCanvas != null)
             {
                 scaleFactor = _cachedRootCanvas.scaleFactor;
                 if (scaleFactor < 1f) scaleFactor = 1f;
@@ -666,6 +690,16 @@ namespace Hyphen
                 string shaderName = GetShaderName();
                 if (_instanceMaterial == null || _instanceMaterial.shader.name != shaderName)
                 {
+                    // Destroy old material to prevent leak
+                    if (_instanceMaterial != null)
+                    {
+                        if (Application.isPlaying)
+                            Destroy(_instanceMaterial);
+                        else
+                            DestroyImmediate(_instanceMaterial);
+                        _instanceMaterial = null;
+                    }
+
                     var shader = Shader.Find(shaderName);
                     if (shader == null)
                     {
@@ -694,7 +728,6 @@ namespace Hyphen
             if (_fontAtlas != null && _fontAtlas.Textures.Count > 0)
                 mat.SetTexture("_MainTex", _fontAtlas.GetTexture(0));
 
-            // All shaders use _TextColor. Outline/Glow also use _EffectColor.
             mat.SetColor("_TextColor", _textColor);
 
             if (_outlineEnabled)
