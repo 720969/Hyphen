@@ -333,13 +333,16 @@ namespace Hyphen.FreeType
 
             GlyphBitmap result = glyphBitmap;
             result.offsetX = (int)blendMinX;
-            result.offsetY = (int)(-blendMaxY + _outlineSize);
+            result.offsetY = (int)(-blendMaxY);
             result.width = (int)blendWidth;
             result.height = (int)blendHeight;
             result.bitmapWidth = (int)blendWidth;
             result.bitmapHeight = (int)blendHeight;
             result.bitmap = blendImage;
             result.isDualChannel = true;
+
+            // xAdvance stays at original glyph's advance — outline pixels overflow
+            // into neighboring character space, matching cocos2dx behavior.
 
             return result;
         }

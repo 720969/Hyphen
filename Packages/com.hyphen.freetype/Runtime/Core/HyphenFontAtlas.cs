@@ -12,8 +12,8 @@ namespace Hyphen
     /// </summary>
     public sealed class HyphenFontAtlas
     {
-        public const int CacheTextureWidth = 2048;
-        public const int CacheTextureHeight = 2048;
+        public const int CacheTextureWidth = 1024;
+        public const int CacheTextureHeight = 1024;
 
         private readonly HyphenFontFreeType _font;
         private readonly Dictionary<char, HyphenLetterDefinition> _letterDefinitions;
@@ -65,11 +65,8 @@ namespace Hyphen
                 _letterPadding += 2 * HyphenFontFreeType.DistanceMapSpread;
             }
 
-            // Match cocos2dx: outline expands glyph bounding box, so lineHeight must grow
-            if (_hasOutline)
-            {
-                _lineHeight += 2 * outlineSize;
-            }
+            // Match cocos2dx: outline is already baked into glyph bitmaps (wider/taller),
+            // so lineHeight stays at the font's natural value.
 
             // Convert lineHeight and ascender from render pixels to layout points
             if (_scaleFactor != 1f)
@@ -141,6 +138,7 @@ namespace Hyphen
             int adjustForExtend = _letterEdgeExtend / 2;
 
             float startY = _currentPageOrigY;
+            int rowHeight = _currLineHeight;  // track current row height (render px)
 
             foreach (char c in newChars)
             {
@@ -153,32 +151,38 @@ namespace Hyphen
                     tempDef.validDefinition = true;
                     tempDef.width = glyphBitmap.width + _letterPadding + _letterEdgeExtend;
                     tempDef.height = glyphBitmap.height + _letterPadding + _letterEdgeExtend;
-                    // offsetX and offsetY: glyphBitmap values are in RENDER pixels (FreeType at fontSize*sf).
-                    // Divide by sf to convert to layout points.
                     tempDef.offsetX = (glyphBitmap.offsetX + adjustForDistanceMap + adjustForExtend);
                     tempDef.offsetY = (_fontAscenderRaw + glyphBitmap.offsetY - adjustForDistanceMap - adjustForExtend);
 
-                    if (glyphBitmap.bitmapHeight > _currLineHeight)
-                    {
-                        _currLineHeight = (int)glyphBitmap.bitmapHeight + _letterPadding + _letterEdgeExtend + 1;
-                    }
+                    int glyphH = (int)glyphBitmap.bitmapHeight + _letterPadding + _letterEdgeExtend + 1;
+                    if (glyphH > rowHeight)
+                        rowHeight = glyphH;
 
+                    // Horizontal wrap: if glyph doesn't fit on current row
                     if (_currentPageOrigX + tempDef.width > CacheTextureWidth)
                     {
-                        _currentPageOrigY += _currLineHeight;
-                        _currLineHeight = 0;
+                        _currentPageOrigY += rowHeight;
+                        rowHeight = glyphH;
                         _currentPageOrigX = 0;
+                        _currLineHeight = rowHeight;
+                    }
+                    else
+                    {
+                        _currLineHeight = rowHeight;
+                    }
 
-                        if (_currentPageOrigY + _lineHeight >= CacheTextureHeight)
-                        {
-                            UploadPageData(_currentPage, (int)startY, CacheTextureHeight - (int)startY);
-
-                            startY = 0;
-                            _currentPageOrigY = 0;
-                            _currentPage++;
-                            CreateNewPage();
-                            Debug.LogWarning($"[Hyphen] Atlas overflowed to page {_currentPage}. Consider using a smaller font size or fewer characters.");
-                        }
+                    // Vertical overflow: current row doesn't fit on this page
+                    if (_currentPageOrigY + glyphH > CacheTextureHeight)
+                    {
+                        UploadPageData(_currentPage, (int)startY, CacheTextureHeight - (int)startY);
+                        startY = 0;
+                        _currentPageOrigY = 0;
+                        _currentPageOrigX = 0;
+                        rowHeight = glyphH;
+                        _currLineHeight = rowHeight;
+                        _currentPage++;
+                        CreateNewPage();
+                        Debug.LogWarning($"[Hyphen] Atlas overflowed to page {_currentPage}.");
                     }
 
                     byte[] currentPage = _pageData[_currentPage];
@@ -234,9 +238,9 @@ namespace Hyphen
                     tempDef.V = 0;
                     tempDef.offsetX = 0;
                     tempDef.offsetY = 0;
-                    tempDef.textureID = 0;
+                    tempDef.textureID = _currentPage;
                     tempDef.xAdvance = glyphBitmap.xAdvance;
-                    _currentPageOrigX += 1;
+                    // No bitmap — don't advance atlas position
                 }
 
                 tempDef.xAdvance = _scaleFactor != 1f ? (int)(glyphBitmap.xAdvance / _scaleFactor) : glyphBitmap.xAdvance;
@@ -262,16 +266,8 @@ namespace Hyphen
 
             if (_hasOutline)
             {
-                // RGBA32: SetPixels32 for reliable cross-platform upload
-                // (LoadRawTextureData fails silently on RGBA32 on some platforms)
-                int pixelCount = CacheTextureWidth * CacheTextureHeight;
-                var pixels = new Color32[pixelCount];
-                for (int i = 0; i < pixelCount; i++)
-                {
-                    int bi = i * 4;
-                    pixels[i] = new Color32(pageBytes[bi], pageBytes[bi + 1], pageBytes[bi + 2], pageBytes[bi + 3]);
-                }
-                texture.SetPixels32(pixels);
+                // RGBA32: SetPixelData avoids allocating a full Color32[] array
+                texture.SetPixelData(pageBytes, 0, 0);
                 texture.Apply(false);
             }
             else

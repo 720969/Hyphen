@@ -77,8 +77,9 @@ half4 frag_outline(HyphenVertexOutput input) : SV_Target
         discard;
         return half4(0,0,0,0);
     }
+    // Shadow quads use same path as text — only vertex color differs (shadowColor vs white).
+    // This matches cocos2dx where shadow pass uses the same frag shader with v_fragmentColor = shadowColor.
     // 1:1 port of ccLabelOutline_frag. color.a mixes text & effect alpha
-    // (previous version wrongly used _TextColor.a only, ignoring _EffectColor.a)
     half4 color = half4(
         _TextColor.rgb * fontAlpha + _EffectColor.rgb * (1.0 - fontAlpha),
         _TextColor.a * fontAlpha + _EffectColor.a * (1.0 - fontAlpha));

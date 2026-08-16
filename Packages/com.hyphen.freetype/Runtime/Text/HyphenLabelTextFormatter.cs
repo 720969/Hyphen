@@ -31,12 +31,23 @@ namespace Hyphen
                         _label.LinesOffsetX.Add(0);
                     break;
                 case TextHAlignment.CENTER:
-                    foreach (var lineWidth in _label.LinesWidth)
-                        _label.LinesOffsetX.Add((_label.ContentSize.x - lineWidth) / 2f);
+                    for (int i = 0; i < _label.NumberOfLines; i++)
+                    {
+                        float lineWidth = i < _label.LinesWidth.Count ? _label.LinesWidth[i] : 0f;
+                        // Find the first valid char's positionX on this line (glyph left bearing).
+                        // LinesWidth includes this bearing space, so we subtract it to center
+                        // the visual content symmetrically rather than the advance-based width.
+                        float firstX = GetFirstCharPositionX(i);
+                        _label.LinesOffsetX.Add((_label.ContentSize.x - lineWidth - firstX) / 2f);
+                    }
                     break;
                 case TextHAlignment.RIGHT:
-                    foreach (var lineWidth in _label.LinesWidth)
-                        _label.LinesOffsetX.Add(_label.ContentSize.x - lineWidth);
+                    for (int i = 0; i < _label.NumberOfLines; i++)
+                    {
+                        float lineWidth = i < _label.LinesWidth.Count ? _label.LinesWidth[i] : 0f;
+                        float firstX = GetFirstCharPositionX(i);
+                        _label.LinesOffsetX.Add(_label.ContentSize.x - lineWidth + firstX);
+                    }
                     break;
             }
 
@@ -52,6 +63,22 @@ namespace Hyphen
                     _label.LetterOffsetY = _label.TextDesiredHeight;
                     break;
             }
+        }
+
+        /// <summary>
+        /// Returns the positionX of the first valid character on the given line,
+        /// or 0 if none found. This is the glyph's left bearing (offsetX) for the
+        /// first character, since nextLetterX starts at 0 for each line.
+        /// </summary>
+        private float GetFirstCharPositionX(int lineIndex)
+        {
+            for (int i = 0; i < _label.LengthOfString; i++)
+            {
+                var info = _label.GetLetterInfo(i);
+                if (info.valid && info.lineIndex == lineIndex)
+                    return info.positionX;
+            }
+            return 0f;
         }
 
         /// <summary>
@@ -260,30 +287,14 @@ namespace Hyphen
         /// </summary>
         public bool IsHorizontalClamp()
         {
-            for (int ctr = 0; ctr < _label.LengthOfString; ctr++)
+            if (_label.LabelWidth <= 0f)
+                return false;
+
+            for (int i = 0; i < _label.NumberOfLines; i++)
             {
-                var letterInfo = _label.GetLetterInfo(ctr);
-                if (!letterInfo.valid) continue;
-
-                if (!atlas_GetLetterDefinition(ctr, out HyphenLetterDefinition letterDef)) continue;
-
-                float px = letterInfo.positionX + letterDef.width / 2f * _label.BMFontScaleVal;
-                int lineIndex = letterInfo.lineIndex;
-
-                if (_label.LabelWidth > 0f)
-                {
-                    if (!_label.EnableWrapVal)
-                    {
-                        if (px > _label.ContentSize.x)
-                            return true;
-                    }
-                    else
-                    {
-                        float wordWidth = _label.LinesWidth[lineIndex];
-                        if (wordWidth > _label.ContentSize.x && px > _label.ContentSize.x)
-                            return true;
-                    }
-                }
+                if (i < _label.LinesWidth.Count &&
+                    _label.LinesWidth[i] > _label.ContentSize.x)
+                    return true;
             }
             return false;
         }
